@@ -7,10 +7,11 @@ __pycache__
 .DS_Store
 
 # PID files
-.*.pid
+*.pid
 
 # Log folder
 logs/
+*.out
 
 # Config folder
 configs/
