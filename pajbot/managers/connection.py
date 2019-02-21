@@ -1,14 +1,14 @@
 import logging
 import random
 import socket
-import urllib
+import ssl
 
 import irc
 from irc.client import InvalidCharacters
 from irc.client import MessageTooLong
 from irc.client import ServerNotConnectedError
 
-from pajbot.utils import find
+from pajbot.tmi import TMI
 
 log = logging.getLogger('pajbot')
 
@@ -46,137 +46,114 @@ class CustomServerConnection(irc.client.ServerConnection):
             self.disconnect('Connection reset by peer.')
 
 
-class Connection:
-    def __init__(self, conn):
-        self.conn = conn
+class Connection(CustomServerConnection):
+    def __init__(self, reactor):
+        super().__init__(reactor)
+
         self.num_msgs_sent = 0
         self.in_channel = False
-
-        return
 
     def reduce_msgs_sent(self):
         self.num_msgs_sent -= 1
 
+    def can_send(self):
+        return self.num_msgs_sent < TMI.message_limit
+
 
 class ConnectionManager:
-    def __init__(self, reactor, bot, message_limit, streamer, backup_conns=2):
-        self.backup_conns_number = backup_conns
+    def __init__(self, reactor, bot, streamer, control_hub_channel):
         self.streamer = streamer
         self.channel = '#' + self.streamer
+        if len(control_hub_channel) > 0:
+            self.control_hub_channel = '#' + control_hub_channel
+        else:
+            self.control_hub_channel = ''
 
         self.reactor = reactor
         self.bot = bot
-        self.message_limit = message_limit
-
-        self.connlist = []
+        self.main_conn = None
 
         self.maintenance_lock = False
 
     def start(self):
         log.debug('Starting connection manager')
         try:
-            for i in range(0, self.backup_conns_number + 1):
-                newconn = self.make_new_connection()
-                self.connlist.append(newconn)
+            self.main_conn = self.make_new_connection()
 
-            self.get_main_conn()
+            self.bot.say('ALLO ZULUL')
 
-            welcome = '{nickname} {version} running!'
-            phrase_data = {
-                'nickname': self.bot.nickname,
-                'version': self.bot.version,
-                 }
-
-            self.bot.say(welcome.format(**phrase_data))
-
-            self.reactor.execute_every(4, self.run_maintenance)
+            self.run_maintenance()
+            self.bot.execute_every(4, self.run_maintenance)
             return True
         except:
+            log.exception('babyrage')
             return False
 
     def run_maintenance(self):
         if self.maintenance_lock:
+            log.debug('skipping due to maintenance lock')
             return
 
         self.maintenance_lock = True
-        clean_conns_count = 0
-        tmp = []  # new list of connections
-        for connection in self.connlist:
-            if not connection.conn.is_connected():
-                log.debug('Removing connection because not connected')
-                continue  # don't want this connection in the new list
+        if self.main_conn is None:
+            self.main_conn = self.make_new_connection()
+            self.maintenance_lock = False
+            return
 
-            if connection.num_msgs_sent <= 5:
-                if clean_conns_count >= self.backup_conns_number and connection.num_msgs_sent == 0:  # we have more connections than needed
-                    log.debug('Removing connection because we have enough backup')
-                    connection.conn.close()
-                    continue  # don't want this connection
-                else:
-                    clean_conns_count += 1
+        if self.main_conn.is_connected():
+            if not self.main_conn.in_channel:
+                if irc.client.is_channel(self.channel):
+                    self.main_conn.join(self.channel)
+                    log.debug('Joined channel')
 
-            tmp.append(connection)
+                if irc.client.is_channel(self.control_hub_channel):
+                    self.main_conn.join(self.control_hub_channel)
+                    log.debug('Joined channel')
 
-        self.connlist = tmp  # replace the old list with the newly constructed one
-        need_more = self.backup_conns_number - clean_conns_count
+                self.main_conn.in_channel = True
 
-        for i in range(0, need_more):  # add as many fresh connections as needed
-            newconn = self.make_new_connection()
-            self.connlist.append(newconn)
-
-        self.get_main_conn()
         self.maintenance_lock = False
 
     def get_main_conn(self):
-        for connection in self.connlist:
-            if connection.conn.is_connected():
-                if not connection.in_channel:
-                    if irc.client.is_channel(self.channel):
-                        connection.conn.join(self.channel)
-                        log.debug('Joined channel')
-                        connection.in_channel = True
+        if self.main_conn is None:
+            self.run_maintenance()
+            return self.get_main_conn()
 
-                return connection.conn
+        return self.main_conn
 
-        self.run_maintenance()
-        return self.get_main_conn()
+    """
+    This method returns a random IRC server from a list of valid twitch IRC servers.
+    The returned servers accept unencrypted IRC traffic. (they are not SSL servers)
+    """
+    def get_chat_server(self):
+        servers = [
+            {'host': 'irc.chat.twitch.tv', 'port': 6697},
+            {'host': 'irc.chat.twitch.tv', 'port': 443},
+        ]
 
-    def get_chat_server(self, streamer):
-        data = None
-        try:
-            data = self.bot.twitchapi.get(['channels', streamer, 'chat_properties'])
-        except urllib.error.HTTPError:
-            log.error('An unhandled HTTP Error occured when trying to create a new connection.')
-
-        if data is None:
-            # return this default shit in case the data is bad
-            # TODO: We should be able to specify in the config if the fallback IP should be
-            #       an IP on the event server or not.
-            return 'irc.twitch.tv', 6667
-
-        server = random.choice(data['chat_servers'])
-        ip, port = server.split(':')
-        return ip, int(port)
+        server = random.choice(servers)
+        return server['host'], server['port']
 
     def make_new_connection(self):
         log.debug('Creating a new IRC connection...')
-        log.debug('Fetching random IRC server... ({0})'.format(self.streamer))
+        log.debug('Selecting random IRC server... ({0})'.format(self.streamer))
 
-        ip, port = self.get_chat_server(self.streamer)
+        ip, port = self.get_chat_server()
 
-        log.debug('Fetched {0}:{1}'.format(ip, port))
+        log.debug('Selected {0}:{1}'.format(ip, port))
 
         try:
-            newconn = CustomServerConnection(self.reactor)
+            ssl_factory = irc.connection.Factory(wrapper=ssl.wrap_socket)
+            newconn = Connection(self.reactor)
             with self.reactor.mutex:
                 self.reactor.connections.append(newconn)
-            newconn.connect(ip, port, self.bot.nickname, self.bot.password, self.bot.nickname)
+            newconn.connect(ip, port, self.bot.nickname, self.bot.password, self.bot.nickname, connect_factory=ssl_factory)
             log.debug('Connecting to IRC server...')
             newconn.cap('REQ', 'twitch.tv/membership')
             newconn.cap('REQ', 'twitch.tv/commands')
             newconn.cap('REQ', 'twitch.tv/tags')
 
-            connection = Connection(newconn)
-            return connection
+            return newconn
         except irc.client.ServerConnectionError:
             return
 
@@ -189,20 +166,14 @@ class ConnectionManager:
         return
 
     def privmsg(self, channel, message, increase_message=True):
-        if increase_message:
-            conn = find(lambda c: c.conn.is_connected() and c.num_msgs_sent < self.message_limit, self.connlist)
-        else:
-            conn = find(lambda c: c.conn.is_connected(), self.connlist)
+        conn = self.get_main_conn()
 
-        if conn is None:
+        if conn is None or not conn.can_send():
             log.error('No available connections to send messages from. Delaying message a few seconds.')
-            self.reactor.execute_delayed(2, self.privmsg, (channel, message, increase_message))
+            self.bot.execute_delayed(2, self.privmsg, (channel, message, increase_message))
             return False
 
-        conn.conn.privmsg(channel, message)
+        conn.privmsg(channel, message)
         if increase_message:
             conn.num_msgs_sent += 1
-            self.reactor.execute_delayed(31, conn.reduce_msgs_sent)
-
-            if conn.num_msgs_sent >= self.message_limit:
-                self.run_maintenance()
+            self.bot.execute_delayed(31, conn.reduce_msgs_sent)

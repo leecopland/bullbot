@@ -91,6 +91,7 @@ class BanphraseModule(BaseModule):
 
             banphrase.set(**options)
             banphrase.data.set(edited_by=options['edited_by'])
+            log.info(banphrase)
             DBManager.session_add_expunge(banphrase)
             bot.banphrase_manager.commit()
             bot.whisper(source.username, 'Updated your banphrase (ID: {banphrase.id}) with ({what})'.format(banphrase=banphrase, what=', '.join([key for key in options if key != 'added_by'])))
@@ -130,7 +131,7 @@ class BanphraseModule(BaseModule):
                 command='add',
                 commands={
                     'banphrase': pajbot.models.command.Command.raw_command(self.add_banphrase,
-                        level=500,
+                        level=690,
                         description='Add a banphrase!',
                         delay_all=0,
                         delay_user=0,
@@ -167,7 +168,7 @@ class BanphraseModule(BaseModule):
                 command='remove',
                 commands={
                     'banphrase': pajbot.models.command.Command.raw_command(self.remove_banphrase,
-                        level=500,
+                        level=690,
                         delay_all=0,
                         delay_user=0,
                         description='Remove a banphrase!',

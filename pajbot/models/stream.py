@@ -178,7 +178,7 @@ class StreamManager:
             return
 
         try:
-            data = self.bot.twitchapi.get(['channels', self.bot.streamer, 'videos'], parameters={'broadcasts': 'true'}, base='https://api.twitch.tv/kraken/')
+            data = self.bot.twitchapi.get(['channels', self.bot.streamer, 'videos'], parameters={'broadcasts': 'true'}, base='http://127.0.0.1:7221/kraken/')
 
             self.bot.mainthread_queue.add(self.refresh_video_url_stage2,
                     args=[data])
@@ -199,10 +199,10 @@ class StreamManager:
                         time_diff = stream_chunk.chunk_start - recorded_at
                         if abs(time_diff.total_seconds()) < 60 * 5:
                             # we found the relevant video!
-                            return video['url'], video['preview'], video['recorded_at']
+                            return video['url'], video['preview']['large'], video['recorded_at']
                     else:
                         if video['status'] == 'recording':
-                            return video['url'], video['preview'], video['recorded_at']
+                            return video['url'], video['preview']['large'], video['recorded_at']
         except urllib.error.HTTPError as e:
             raw_data = e.read().decode('utf-8')
             log.exception('OMGScoots')
@@ -351,11 +351,14 @@ class StreamManager:
             db_session.expunge_all()
 
             if new_stream:
+                self.bot.say('dank__doge SoBayed')
                 HandlerManager.trigger('on_stream_start', stop_on_false=False)
 
             log.info('Successfully created a stream')
 
     def go_offline(self):
+        self.bot.say('PepeHands offline chat')
+
         with DBManager.create_session_scope(expire_on_commit=False) as db_session:
             self.current_stream.ended = True
             self.current_stream.stream_end = self.first_offline
@@ -398,11 +401,11 @@ class StreamManager:
                 })
 
             self.num_viewers = status['viewers']
-            log.debug('Loading stream data...')
+            # log.debug('Loading stream data...')
             self.game = status['game']
             self.title = status['title']
 
-            log.debug('Game is now {} and title is now {}'.format(self.game, self.title))
+            # log.debug('Game is now {} and title is now {}'.format(self.game, self.title))
 
             if status['online']:
                 if self.current_stream is None:

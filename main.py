@@ -3,6 +3,7 @@ import logging
 import os
 import signal
 import sys
+import traceback
 
 from pajbot.bot import Bot
 
@@ -52,6 +53,9 @@ def run(args):
 
 def handle_exceptions(exctype, value, tb):
     log.error('Logging an uncaught exception', exc_info=(exctype, value, tb))
+    with open('/srv/admiralbullbot/errors.txt', 'a') as f:
+        newString = '{}\n{}\n{}\n'.format(exctype, value, tb)
+        f.write(newString)
 
 
 if __name__ == '__main__':

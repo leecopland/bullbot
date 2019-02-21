@@ -122,6 +122,69 @@ class AdminCommandsModule(BaseModule):
             bot.silent = False
             bot.whisper(source.username, 'The bot can now talk again')
 
+    def cmd_module(self, **options):
+        bot = options['bot']
+        # source = options['source']
+        message = options['message']
+
+        module_manager = bot.module_manager
+
+        if not message:
+            return
+
+        msg_args = message.split(' ')
+        if len(msg_args) < 1:
+            return
+
+        sub_command = msg_args[0].lower()
+
+        if sub_command == 'list':
+            for module in module_manager.all_modules:
+                bot.say('Module ID: {}'.format(module.ID))
+        elif sub_command == 'disable':
+            if len(msg_args) < 2:
+                return
+            module_id = msg_args[1].lower()
+
+            module = module_manager.get_module(module_id)
+            if not module:
+                bot.say('No module with the id {} found'.format(module_id))
+                return
+
+            if module.MODULE_TYPE > ModuleType.TYPE_NORMAL:
+                bot.say('Unable to disable module {}'.format(module_id))
+                return
+
+            if not module_manager.disable_module(module_id, True):
+                bot.say('Unable to disable module {}, maybe it\'s not enabled?'.format(module_id))
+                return
+
+            # Rebuild command cache
+            bot.commands.rebuild()
+            bot.say('Disabled module {}'.format(module_id))
+
+        elif sub_command == 'enable':
+            if len(msg_args) < 2:
+                return
+            module_id = msg_args[1].lower()
+
+            module = module_manager.get_module(module_id)
+            if not module:
+                bot.say('No module with the id {} found'.format(module_id))
+                return
+
+            if module.MODULE_TYPE > ModuleType.TYPE_NORMAL:
+                bot.say('Unable to enable module {}'.format(module_id))
+                return
+
+            if not module_manager.enable_module(module_id):
+                bot.say('Unable to enable module {}, maybe it\'s already enabled?'.format(module_id))
+                return
+
+            # Rebuild command cache
+            bot.commands.rebuild()
+            bot.say('Enabled module {}'.format(module_id))
+
     def load_commands(self, **options):
         self.commands['w'] = pajbot.models.command.Command.raw_command(self.whisper,
                 level=2000,
@@ -131,13 +194,13 @@ class AdminCommandsModule(BaseModule):
                 description='Modifies a users points',
                 examples=[
                     pajbot.models.command.CommandExample(None, 'Give a user points',
-                        chat='user:!editpoints pajlada 500\n'
-                        'bot>user:Successfully gave pajlada 500 points.',
-                        description='This creates 500 points and gives them to pajlada').parse(),
+                        chat='user:!editpoints datguy1 500\n'
+                        'bot>user:Successfully gave DatGuy1 500 points.',
+                        description='This creates 500 points and gives them to DatGuy1').parse(),
                     pajbot.models.command.CommandExample(None, 'Remove points from a user',
-                        chat='user:!editpoints pajlada -500\n'
-                        'bot>user:Successfully removed 500 points from pajlada.',
-                        description='This removes 500 points from pajlada. Users can go into negative points with this.').parse(),
+                        chat='user:!editpoints DatGuy1 -500\n'
+                        'bot>user:Successfully removed 500 points from DatGuy1.',
+                        description='This removes 500 points from DatGuy1. Users can go into negative points with this.').parse(),
                     ])
         self.commands['level'] = pajbot.models.command.Command.raw_command(self.level,
                 level=1000,
@@ -152,3 +215,7 @@ class AdminCommandsModule(BaseModule):
                 level=500,
                 description='Unsilence the bot')
         self.commands['unmute'] = self.commands['unsilence']
+
+        self.commands['module'] = pajbot.models.command.Command.raw_command(self.cmd_module,
+                level=500,
+                description='Modify module')

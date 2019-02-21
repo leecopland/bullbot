@@ -32,14 +32,6 @@ def init(app):
                 user.num_lines = redis_user[1]
                 top_5_line_farmers.append(user)
 
-            return render_template('stats.html',
-                    top_5_commands=top_5_commands,
-                    top_5_line_farmers=top_5_line_farmers)
-
-    @app.route('/stats/duels/')
-    def stats_duels():
-        with DBManager.create_session_scope() as db_session:
-
             data = {
                     'top_5_winners': db_session.query(UserDuelStats).order_by(UserDuelStats.duels_won.desc())[:5],
                     'top_5_points_won': db_session.query(UserDuelStats).order_by(UserDuelStats.profit.desc())[:5],
@@ -49,4 +41,7 @@ def init(app):
                     'bottom_5_winrate': db_session.query(UserDuelStats).filter(UserDuelStats.duels_lost >= 5).order_by(UserDuelStats.winrate.asc())[:5],
                     }
 
-            return render_template('stats_duels.html', **data)
+            return render_template('stats.html',
+                    **data,
+                    top_5_commands=top_5_commands,
+                    top_5_line_farmers=top_5_line_farmers)

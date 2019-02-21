@@ -122,18 +122,17 @@ class PointLotteryModule(BaseModule):
                 tickets = int(message.split(' ')[1])
 
             if not source.can_afford(tickets):
-                bot.me('Sorry, {0}, you don\'t have enough points! FeelsBadMan'.format(source.username_raw))
+                bot.whisper(source.username, 'Sorry, {0}, you don\'t have enough points! FeelsBadMan'.format(source.username_raw))
                 return False
 
             if tickets <= 0:
-                bot.me('Sorry, {0}, you have to buy at least 1 ticket! FeelsBadMan'.format(source.username_raw))
+                bot.whisper(source.username, 'Sorry, {0}, you have to buy at least 1 ticket! FeelsBadMan'.format(source.username_raw))
                 return False
 
             source.points -= tickets
             self.lottery_points += tickets
-            log.info('Lottery points is now at {}'.format(self.lottery_points))
         except (ValueError, TypeError, AttributeError):
-            bot.me('Sorry, {0}, I didn\'t recognize your command! FeelsBadMan'.format(source.username_raw))
+            bot.whisper(source.username, 'Sorry, {0}, I didn\'t recognize your command! FeelsBadMan'.format(source.username_raw))
             return False
 
         # Added user to the lottery

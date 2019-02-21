@@ -13,12 +13,14 @@ from pajbot.modules.basic.dbmanage import DBManageModule
 from pajbot.modules.basic.debug import DebugModule
 from pajbot.modules.basic.ffzemotes import FFZEmotesModule
 from pajbot.modules.basic.ignore import IgnoreModule
+from pajbot.modules.basic.nuke import NukeModule
 from pajbot.modules.basic.permaban import PermabanModule
 from pajbot.modules.basic.pointsreset import PointsResetModule
 from pajbot.modules.bingo import BingoModule
 from pajbot.modules.blackjack import BlackjackModule
 from pajbot.modules.chatters import ChattersModule
 from pajbot.modules.deck import DeckModule
+from pajbot.modules.dotabet import DotaBetModule
 from pajbot.modules.dubtrack import DubtrackModule
 from pajbot.modules.duel import DuelModule
 from pajbot.modules.dummy import DummyModule
@@ -29,6 +31,7 @@ from pajbot.modules.followage import FollowAgeModule
 from pajbot.modules.givepoints import GivePointsModule
 from pajbot.modules.highlight import HighlightModule
 from pajbot.modules.hsbet import HSBetModule
+from pajbot.modules.labspoints import DonationPointsModule
 from pajbot.modules.lastfm import LastfmModule
 from pajbot.modules.leaguerank import LeagueRankModule
 from pajbot.modules.linefarming import LineFarmingModule
@@ -41,7 +44,6 @@ from pajbot.modules.math import MathModule
 from pajbot.modules.maxmsglength import MaxMsgLengthModule
 from pajbot.modules.casechecker import CaseCheckerModule
 from pajbot.modules.paidsubmode import PaidSubmodeModule
-from pajbot.modules.paidtimeout import PaidTimeoutDiscountModule
 from pajbot.modules.paidtimeout import PaidTimeoutModule
 from pajbot.modules.paiduntimeout import PaidUntimeoutModule
 from pajbot.modules.personaluptime import PersonalUptimeModule
@@ -58,12 +60,13 @@ from pajbot.modules.quests.winduels import WinDuelsQuestModule
 from pajbot.modules.quests.winhsbetpoints import WinHsBetPointsQuestModule
 from pajbot.modules.quests.winhsbetwins import WinHsBetWinsQuestModule
 from pajbot.modules.quests.winraffle import WinRaffleQuestModule
+from pajbot.modules.quote import QuoteModule
 from pajbot.modules.raffle import RaffleModule
 from pajbot.modules.repspam import RepspamModule
 from pajbot.modules.roulette import RouletteModule
 from pajbot.modules.subalert import SubAlertModule
 from pajbot.modules.tokencommands.playsound import PlaySoundTokenCommandModule
-from pajbot.modules.tokencommands.showemote import ShowEmoteTokenCommandModule
+from pajbot.modules.showemote import ShowEmoteTokenCommandModule
 from pajbot.modules.top import TopModule
 from pajbot.modules.trivia import TriviaModule
 from pajbot.modules.vanish import VanishModule
@@ -82,6 +85,8 @@ available_modules = [
         DBManageModule,
         DebugModule,
         DeckModule,
+        DonationPointsModule,
+        DotaBetModule,
         DubtrackModule,
         DuelModule,
         DummyModule,
@@ -102,9 +107,9 @@ available_modules = [
         LinkTrackerModule,
         MathModule,
         MaxMsgLengthModule,
+        NukeModule,
         CaseCheckerModule,
         PaidSubmodeModule,
-        PaidTimeoutDiscountModule,
         PaidTimeoutModule,
         PaidUntimeoutModule,
         PermabanModule,
@@ -116,6 +121,7 @@ available_modules = [
         PredictModule,
         PyramidModule,
         QuestModule,
+        QuoteModule,
         RaffleModule,
         RepspamModule,
         RouletteModule,

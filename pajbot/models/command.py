@@ -366,14 +366,18 @@ class Command(Base):
 
         if source.level < self.level:
             # User does not have a high enough power level to run this command
+            bot.whisper(source.username, 'You don\'t have a high enough access level to use this command. If you think you are supposed to, ' \
+                                         'contact DatGuy1/Darth_Henry/AdmiralBulldog')
             return False
 
         if whisper and self.can_execute_with_whisper is False and source.level < Command.MIN_WHISPER_LEVEL and source.moderator is False:
             # This user cannot execute the command through a whisper
+            bot.whisper(source.username, 'You can\'t use this command in whispers you baboon')
             return False
 
         if self.sub_only and source.subscriber is False and source.level < Command.BYPASS_SUB_ONLY_LEVEL and source.moderator is False:
             # User is not a sub or a moderator, and cannot use the command.
+            bot.whisper(source.username, 'This is a sub only command :)')
             return False
 
         if self.mod_only and source.moderator is False and source.level < Command.BYPASS_MOD_ONLY_LEVEL:

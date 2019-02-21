@@ -51,6 +51,22 @@ function handle_command(base_key, command)
                 }
                 break;
 
+            case 'cost':
+                var el = $('div.sticky.'+base_key+' tr[data-key="'+key+'"]');
+                if (el.length == 0) {
+                    return;
+                }
+
+                 console.log('Point cost is:', value);
+                if (value == null || value == false) {
+                    el.hide();
+                } else {
+                    el.show();
+                    el.find('.value').html(value);
+                }
+                break;
+
+
             case 'examples':
                 var el_base = $('div.sticky.'+base_key+' .command-examples');
                 el_base.empty();
@@ -88,7 +104,7 @@ function handle_command(base_key, command)
                                 if (message.source.from == 'bot') {
                                     chat_html += bot_name;
                                 } else {
-                                    chat_html += 'pajlada';
+                                    chat_html += 'DatGuy1';
                                 }
                                 chat_html += '</span>';
                             } else if (message.source.type == 'whisper') {

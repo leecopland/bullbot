@@ -1,10 +1,13 @@
 import logging
 import re
+import requests
+import sys
 
 from sqlalchemy import func
 
 from pajbot.managers.adminlog import AdminLogManager
 from pajbot.managers.db import DBManager
+from pajbot.managers.redis import RedisManager
 from pajbot.models.user import User
 
 log = logging.getLogger(__name__)
@@ -77,32 +80,35 @@ class Dispatch:
                 phrase_data['nl_pos'] = int(query_data[0]) + 1
                 bot.say(nl_pos.format(**phrase_data))
 
-    def query(bot, source, message, event, args):
-        # XXX: This should be a module. Only when we've moved server though.
-        if bot.wolfram is None:
-            return False
-
-        try:
-            log.debug('Querying wolfram "{0}"'.format(message))
-            res = bot.wolfram.query(message)
-
-            x = 0
-            for pod in res.pods:
-                if x == 1:
-                    res = '{0}'.format(' '.join(pod.text.splitlines()).strip())
-                    log.debug('Answering with {0}'.format(res))
-                    bot.say(res)
-                    break
-
-                x = x + 1
-        except Exception as e:
-            log.error('caught exception: {0}'.format(e))
-
     def add_win(bot, source, message, event, args):
         # XXX: this is ugly as fuck
         bot.kvi['br_wins'].inc()
         bot.me('{0} added a BR win!'.format(source.username))
         log.debug('{0} added a BR win!'.format(source.username))
+
+    def add_playsound(bot, source, message, event, args):
+        if message is not None and len(message.split(' ')) == 3:
+            playsoundCategory = message.split(' ')[0]
+            playsoundName = message.split(' ')[1]
+            playsoundURL = message.split(' ')[2]
+            _savedplaysounds = RedisManager.get().hgetall('playsounds:{}'.format(playsoundCategory))
+
+            if playsoundName in _savedplaysounds:
+                bot.say('Name of playsound already exists. Please choose a different name')
+                return False
+
+            elif playsoundURL in _savedplaysounds:
+                bot.say('URL of playsound already exists. Please choose a different link')
+                return False
+
+            with RedisManager.pipeline_context() as pipeline:
+                pipeline.hset('playsounds:{}'.format(playsoundCategory), playsoundName, playsoundURL)
+
+            bot.say('Successfully added {} with the name {} to the playsound list'.format(playsoundURL, playsoundName))
+
+        else:
+            bot.say('Invalid syntax. Usage: !add playsound category name url')
+            return False
 
     def add_command(bot, source, message, event, args):
         """Dispatch method for creating commands.
@@ -505,7 +511,7 @@ class Dispatch:
         log.debug(args)
 
         log.debug('timeouting {0}'.format(source.username))
-        bot.timeout(source.username, _time, reason='Matched bad filter')
+        bot.timeout(source.username, _time, reason='Matched filter: {}'.format(args['filter'].name))
 
     def single_timeout_source(bot, source, message, event, args):
         if 'time' in args:
@@ -524,13 +530,25 @@ class Dispatch:
                 log.error('Caught an exception: {0}'.format(e))
 
     def eval(bot, source, message, event, args):
-        if bot.dev and message and len(message) > 0:
+        if message and len(message) > 0:
             try:
                 exec(message)
-            except:
+            except Exception as e:
                 log.exception('Exception caught while trying to evaluate code: "{0}"'.format(message))
+                bot.whisper(source.username, 'Error: {}'.format(e))
         else:
             log.error('Eval cannot be used like that.')
+
+    def color(bot, source, message, event, args):
+        if not message:
+            return False
+
+        parts = message.split(' ')
+        if len(parts) < 1:
+            return False
+
+        bot.safe_privmsg('.color {}'.format(parts[0]))
+            
 
     def check_sub(bot, source, message, event, args):
         if message:
@@ -552,13 +570,15 @@ class Dispatch:
             return False
 
         parts = message.split(' ')
-        if len(parts) < 2:
+        if len(parts) < 1:
             # Not enough arguments
             return False
 
         delay = int(parts[0])
-        extra_message = '{0} {1}'.format(source.username, ' '.join(parts[1:]).strip())
+        reminder_text = ' '.join(parts[1:]).strip()
+        extra_message = '{0}, your reminder from {1} seconds ago is over: {2}'.format(source.username_raw, delay, reminder_text)
 
+        bot.say('{0}, I will remind you of \'{2}\' in {1} seconds. SeemsGood'.format(source.username_raw, delay, reminder_text))
         bot.execute_delayed(delay, bot.say, (extra_message, ))
 
     def ord(bot, source, message, event, args):

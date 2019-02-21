@@ -26,12 +26,14 @@ class asyncSocketIo():
         self.receive_events_thread = threading.Thread(target=self._receive_events_thread)
         self.receive_events_thread.daemon = True
         self.receive_events_thread.start()
-    
+
     def on_event(self, *args):
         DonationPointsModule.updatePoints(args, self.bot, self.settings)
 
     def on_disconnect(self, *args):
         log.error('Socket disconnected. Donations no longer monitored')
+        self.bot.say('Socket disconnected. Donations no longer monitored')
+        self.bot.execute_delayed(600, self.__init__, (self.bot, self.settings))
 
     def _receive_events_thread(self):
         self.socketio.wait()

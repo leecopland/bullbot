@@ -26,6 +26,8 @@ class FFZEmotesModule(BaseModule):
 
     def get_ffz_emotes(self, **options):
         bot = options['bot']
+        # bot.say('No EleGiggle')
+        # return True
 
         if len(bot.emotes.ffz_emote_manager.channel_emotes) > 0:
             base_msg = 'FFZ Emotes:'
@@ -49,9 +51,9 @@ class FFZEmotesModule(BaseModule):
 
     def load_commands(self, **options):
         get_cmd = pajbot.models.command.Command.raw_command(self.get_ffz_emotes,
-                level=100,
-                delay_all=3,
-                delay_user=6,
+                level=500,
+                delay_all=60,
+                delay_user=200,
                 examples=[
                     pajbot.models.command.CommandExample(None, 'Show all active ffz emotes for this channel.',
                         chat='user: !ffzemotes\n'
@@ -73,7 +75,7 @@ class FFZEmotesModule(BaseModule):
         # The ' ' is there to make things look good in the
         # web interface.
         self.commands['ffzemotes'] = pajbot.models.command.Command.multiaction_command(
-                level=100,
+                level=500,
                 default=' ',
                 fallback=' ',
                 command='ffzemotes',

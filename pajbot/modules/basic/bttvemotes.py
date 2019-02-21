@@ -49,9 +49,9 @@ class BTTVEmotesModule(BaseModule):
 
     def load_commands(self, **options):
         get_cmd = pajbot.models.command.Command.raw_command(self.get_bttv_emotes,
-                level=100,
-                delay_all=3,
-                delay_user=6,
+                level=500,
+                delay_all=100,
+                delay_user=200,
                 examples=[
                     pajbot.models.command.CommandExample(None, 'Show all active bttv emotes for this channel.',
                         chat='user: !bttvemotes\n'
@@ -73,7 +73,7 @@ class BTTVEmotesModule(BaseModule):
         # The ' ' is there to make things look good in the
         # web interface.
         self.commands['bttvemotes'] = pajbot.models.command.Command.multiaction_command(
-                level=100,
+                level=500,
                 default=' ',
                 fallback=' ',
                 command='bttvemotes',

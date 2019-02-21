@@ -16,9 +16,9 @@ class ChattersModule(BaseModule):
     ID = __name__.split('.')[-1]
     NAME = 'Chatters'
     DESCRIPTION = 'Refreshes chatters'
-    ENABLED_DEFAULT = True
+    # ENABLED_DEFAULT = True
     CATEGORY = 'Internal'
-    HIDDEN = True
+    # HIDDEN = True
     SETTINGS = []
 
     def __init__(self):

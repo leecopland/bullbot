@@ -90,6 +90,7 @@ def init(args):
     pajbot.web.routes.admin.init(app)
     pajbot.web.routes.api.init(app)
     pajbot.web.routes.base.init(app)
+    pajbot.web.routes.playsound.init(app)
 
     pajbot.web.common.filters.init(app)
     pajbot.web.common.assets.init(app)

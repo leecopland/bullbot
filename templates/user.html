@@ -3,197 +3,240 @@
 {% block title %}Profile - {{ user.username_raw}}{% endblock %}
 {% block body %}
 <div id="userprofile">
-    <h2>User Profile - {{ user.username_raw }}</h2>
-    <div class="mediumtable">
-        <table class="ui very basic table celled">
-            <tbody>
-                <tr>
-                    <td><strong>Username</strong></td>
-                    <td>{% include 'user/username_link.html' %}</td>
-                </tr>
-                <tr>
-                    <td><strong>ID</strong></td>
-                    <td>{{ user.id }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Level</strong></td>
-                    <td>
-                        {% if user.level < 250 %}
-                        User
-                        {% elif user.level < 500 %}
-                        Dank Helper
-                        {% elif user.level < 1000 %}
-                        Moderator
-                        {% elif user.level < 1500 %}
-                        Super Moderator/Broadcaster
-                        {% elif user.level < 2500 %}
-                        Admin
-                        {% else %}
-                        ???
-                        {% endif %} ({{ user.level }})
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>Points</strong></td>
-                    <td>{{ user.points }} (Rank {{ user.points_rank }})</td>
-                </tr>
-                <tr>
-                    <td><strong>Messages sent</strong></td>
-                    <td>{{ user.num_lines }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Last seen</strong></td>
-                    {% if user.last_seen %}
-                    <td>{{ user.last_seen|strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                    {% else %}
-                    <td>Never</td>
-                    {% endif %}
-                </tr>
+  <h2>User Profile - {{ user.username_raw }}</h2>
+  <div class="mediumtable">
+    <table class="ui very basic table celled">
+      <tbody>
+        <tr>
+          <td><strong>Username</strong></td>
+          <td>{% include 'user/username_link.html' %}</td>
+        </tr>
+        <tr>
+          <td><strong>ID</strong></td>
+          <td>{{ user.id }}</td>
+        </tr>
+        <tr>
+          <td><strong>Level</strong></td>
+          <td>
+            {% if user.level < 250 %} User {% elif user.level < 500 %} Dank Helper {% elif user.level < 1000 %} Moderator {% elif user.level < 1500 %} Super Moderator/Broadcaster {% elif user.level < 2500 %} Admin {% else %} ??? {% endif %} ({{
+              user.level }}) </td> </tr> <tr>
+          <td><strong>Points</strong></td>
+          <td>{{ user.points }} (Rank {{ user.points_rank }})</td>
+        </tr>
+        <tr>
+          <td><strong>Messages sent</strong></td>
+          <td>{{ user.num_lines }}</td>
+        </tr>
+        <tr>
+          <td><strong>Last seen</strong></td>
+          {% if user.last_seen %}
+          <td>{{ user.last_seen|strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          {% else %}
+          <td>Never</td>
+          {% endif %}
+        </tr>
 
-                <tr>
-                    <td><strong>Last active in chat</strong></td>
-                    {% if user.last_active %}
-                    <td>{{ user.last_active|strftime('%Y-%m-%d %H:%M:%S') }} &emsp; <a href="https://ttv.overrustlelogs.net/{{ streamer.full_name }}/{{ user.username_raw }}">logs</a></td>
-                    {% else %}
-                    <td>Never</td>
-                    {% endif %}
-                </tr>
-                <tr>
-                    <td><strong>Time spent watching the stream</strong></td>
-                    <td>{{ (user.minutes_in_chat_online * 60)|time_ago_timespan_seconds }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Time spent in offline chat</strong></td>
-                    {% if user.minutes_in_chat_offline > user.minutes_in_chat_online * 2 %}
-                    <td class="pemote">{{ (user.minutes_in_chat_offline * 60)|time_ago_timespan_seconds }} NotLikeThis</td>
-                    {% else %}
-                    <td>{{ (user.minutes_in_chat_offline * 60)|time_ago_timespan_seconds }}</td>
-                    {% endif %}
-                </tr>
-                <tr>
-                    <td><strong>Permabanned on {{ bot.name }}</strong></td>
-                    <td>{%if user.banned == 1 %}Yes{% else %}No{% endif %}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        {% if user.duel_stats %}
-        <h3>Duel stats</h3>
-        <table class="ui very basic table celled">
-            <tbody>
-                <tr>
-                    <td><strong>Duels Total</strong></td>
-                    <td>{{ user.duel_stats.duels_total }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Duels Won</strong></td>
-                    <td>{{ user.duel_stats.duels_won }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Duels Lost</strong></td>
-                    <td>{{ user.duel_stats.duels_lost }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Winrate</strong></td>
-                    <td>{{ user.duel_stats.winrate|round(2) }}%</td>
-                </tr>
-                <tr>
-                    <td><strong>Profit from duels</strong></td>
-                    <td>{{ user.duel_stats.profit }} points</td>
-                </tr>
-                <tr>
-                    <td><strong>Last duel</strong></td>
-                    <td>{{ user.duel_stats.last_duel|localize|strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                </tr>
-                {% if user.duel_stats.longest_winstreak > 1 %}
-                <tr>
-                    <td><strong>Longest Win Streak</strong></td>
-                    <td>{{ user.duel_stats.longest_winstreak }}</td>
-                </tr>
-                {% endif %}
-                {% if user.duel_stats.longest_losestreak > 1 %}
-                <tr>
-                    <td><strong>Longest Lose Streak</strong></td>
-                    <td>{{ user.duel_stats.longest_losestreak }}</td>
-                </tr>
-                {% endif %}
-                {% if user.duel_stats.current_streak > 1 %}
-                <tr>
-                    <td><strong>Current Win Streak</strong></td>
-                    <td>{{ user.duel_stats.current_streak }}</td>
-                </tr>
-                {% elif user.duel_stats.current_streak < -1 %}
-                <tr>
-                    <td><strong>Current Lose Streak</strong></td>
-                    <td>{{ user.duel_stats.current_streak|abs }}</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+        <tr>
+          <td><strong>Last active in chat</strong></td>
+          {% if user.last_active %}
+          <td>{{ user.last_active|strftime('%Y-%m-%d %H:%M:%S') }} &emsp; <a href="https://ttv.overrustlelogs.net/{{ streamer.full_name }}/{{ user.username_raw }}">logs</a></td>
+          {% else %}
+          <td>Never</td>
+          {% endif %}
+        </tr>
+        <tr>
+          <td><strong>Time spent watching the stream</strong></td>
+          <td>{{ (user.minutes_in_chat_online * 60)|time_ago_timespan_seconds }}</td>
+        </tr>
+        <tr>
+          <td><strong>Time spent in offline chat</strong></td>
+          {% if user.minutes_in_chat_offline > user.minutes_in_chat_online * 2 %}
+          <td class="pemote">{{ (user.minutes_in_chat_offline * 60)|time_ago_timespan_seconds }} NotLikeThis</td>
+          {% else %}
+          <td>{{ (user.minutes_in_chat_offline * 60)|time_ago_timespan_seconds }}</td>
+          {% endif %}
+        </tr>
+        <tr>
+          <td><strong>Permabanned on {{ bot.name }}</strong></td>
+          <td>{%if user.banned == 1 %}Yes{% else %}No{% endif %}</td>
+        </tr>
+      </tbody>
+    </table>
+    {% if dotabet_stats %}
+    <h3>Betting stats</h3>
+    <table class="ui very basic table collapsing">
+      <tbody>
+        <tr>
+          <td><strong>Total points bet for</strong></td>
+          <td>{{ dotabet_stats.total_points }}</td>
+        </tr>
+        <tr>
+          <td><strong>Number of bets</strong></td>
+          <td>{{ dotabet_stats.num_bets }}</td>
+        </tr>
+        <tr>
+          <td><strong>Profit</strong></td>
+          <td><span class="points {{ 'negative' if dotabet_stats.profit < 0 else 'positive' }}">{{ dotabet_stats.profit }}</span></td>
+        </tr>
+        <tr>
+          <td><strong>Winrate</strong></td>
+          <td><span class="winrate {{ 'positive' if dotabet_stats.winrate >= 50 else 'negative' }}">{{ dotabet_stats.winrate_str }}</span></td>
+        </tr>
+        <tr>
+          <td><strong>Biggest winstreak</strong></td>
+          <td>{{ dotabet_stats.biggest_winstreak }}</td>
+        </tr>
+        <tr>
+          <td><strong>Biggest losestreak</strong></td>
+          <td>{{ dotabet_stats.biggest_losestreak }}</td>
+        </tr>
+        {% if dotabet_stats.biggest_profit != 0 %}
+        <tr>
+          <td><strong>Biggest profit</strong></td>
+          <td><span class="points positive">{{ dotabet_stats.biggest_profit }}</span></td>
+        </tr>
         {% endif %}
+      </tbody>
+    </table>
+    {% endif %}
 
-        {% if roulette_stats %}
-        <h3>Roulette stats</h3>
-        <table class="ui very basic table collapsing">
-            <tbody>
-                <tr>
-                    <td><strong>Total points rouletted for</strong></td>
-                    <td>{{ roulette_stats.total_points }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Roulettes amount</strong></td>
-                    <td>{{ roulette_stats.num_roulettes }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Profit</strong></td>
-                    <td><span class="points {{ 'negative' if roulette_stats.profit < 0 else 'positive' }}">{{ roulette_stats.profit }}</span></td>
-                </tr>
-                <tr>
-                    <td><strong>Winrate</strong></td>
-                    <td><span class="winrate {{ 'positive' if roulette_stats.winrate > roulette_stats.roulette_base_winrate else 'negative' }}">{{ roulette_stats.winrate_str }}</span></td>
-                </tr>
-                <tr>
-                    <td><strong>Biggest winstreak</strong></td>
-                    <td>{{ roulette_stats.biggest_winstreak }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Biggest losestreak</strong></td>
-                    <td>{{ roulette_stats.biggest_losestreak }}</td>
-                </tr>
-                {% if roulette_stats.biggest_win != 0 %}
-                    <tr>
-                        <td><strong>Biggest win</strong></td>
-                        <td><span class="points positive">{{ roulette_stats.biggest_win}}</span></td>
-                    </tr>
-                {% endif %}
-                {% if roulette_stats.biggest_loss != 0 %}
-                    <tr>
-                        <td><strong>Biggest loss</strong></td>
-                        <td><span class="points negative">{{ roulette_stats.biggest_loss}}</span></td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-        {% endif %}
+    {% if bets|length > 0 %}
+    <h3>Betting history</h3>
+    <table class="ui very basic table collapsing">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Bet</th>
+          <th>Profit</th>
+      </thead>
+      <tbody>
+        {% for bet in bets %}
+        <tr>
+          <td>{{ bet.game_time }}</td>
+          <td><span>{{ bet.points }}</span></td>
+          <td><span class="points {{ 'negative' if bet.profit < 0 else 'positive' }}">{{ bet.profit }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
 
-        {% if roulettes|length > 0 %}
-        <h3>Roulette history</h3>
-        <table class="ui very basic table collapsing">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Diff</th>
-            </thead>
-            <tbody>
-                {% for roulette in roulettes %}
-                <tr>
-                    <td>{{ roulette.created_at }}</td>
-                    <td><span class="points {{ 'negative' if roulette.points < 0 else 'positive' }}">{{ roulette.points }}</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    {% if user.duel_stats %}
+    <h3>Duel stats</h3>
+    <table class="ui very basic table celled">
+      <tbody>
+        <tr>
+          <td><strong>Duels Total</strong></td>
+          <td>{{ user.duel_stats.duels_total }}</td>
+        </tr>
+        <tr>
+          <td><strong>Duels Won</strong></td>
+          <td>{{ user.duel_stats.duels_won }}</td>
+        </tr>
+        <tr>
+          <td><strong>Duels Lost</strong></td>
+          <td>{{ user.duel_stats.duels_lost }}</td>
+        </tr>
+        <tr>
+          <td><strong>Winrate</strong></td>
+          <td>{{ user.duel_stats.winrate|round(2) }}%</td>
+        </tr>
+        <tr>
+          <td><strong>Profit from duels</strong></td>
+          <td>{{ user.duel_stats.profit }} points</td>
+        </tr>
+        <tr>
+          <td><strong>Last duel</strong></td>
+          <td>{{ user.duel_stats.last_duel|localize|strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        </tr>
+        {% if user.duel_stats.longest_winstreak > 1 %}
+        <tr>
+          <td><strong>Longest Win Streak</strong></td>
+          <td>{{ user.duel_stats.longest_winstreak }}</td>
+        </tr>
         {% endif %}
-    </div>
+        {% if user.duel_stats.longest_losestreak > 1 %}
+        <tr>
+          <td><strong>Longest Lose Streak</strong></td>
+          <td>{{ user.duel_stats.longest_losestreak }}</td>
+        </tr>
+        {% endif %}
+        {% if user.duel_stats.current_streak > 1 %}
+        <tr>
+          <td><strong>Current Win Streak</strong></td>
+          <td>{{ user.duel_stats.current_streak }}</td>
+        </tr>
+        {% elif user.duel_stats.current_streak < -1 %} <tr>
+          <td><strong>Current Lose Streak</strong></td>
+          <td>{{ user.duel_stats.current_streak|abs }}</td>
+          </tr>
+          {% endif %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if roulette_stats %}
+    <h3>Roulette stats</h3>
+    <table class="ui very basic table collapsing">
+      <tbody>
+        <tr>
+          <td><strong>Total points rouletted for</strong></td>
+          <td>{{ roulette_stats.total_points }}</td>
+        </tr>
+        <tr>
+          <td><strong>Roulettes amount</strong></td>
+          <td>{{ roulette_stats.num_roulettes }}</td>
+        </tr>
+        <tr>
+          <td><strong>Profit</strong></td>
+          <td><span class="points {{ 'negative' if roulette_stats.profit < 0 else 'positive' }}">{{ roulette_stats.profit }}</span></td>
+        </tr>
+        <tr>
+          <td><strong>Winrate</strong></td>
+          <td><span class="winrate {{ 'positive' if roulette_stats.winrate > roulette_stats.roulette_base_winrate else 'negative' }}">{{ roulette_stats.winrate_str }}</span></td>
+        </tr>
+        <tr>
+          <td><strong>Biggest winstreak</strong></td>
+          <td>{{ roulette_stats.biggest_winstreak }}</td>
+        </tr>
+        <tr>
+          <td><strong>Biggest losestreak</strong></td>
+          <td>{{ roulette_stats.biggest_losestreak }}</td>
+        </tr>
+        {% if roulette_stats.biggest_win != 0 %}
+        <tr>
+          <td><strong>Biggest win</strong></td>
+          <td><span class="points positive">{{ roulette_stats.biggest_win}}</span></td>
+        </tr>
+        {% endif %}
+        {% if roulette_stats.biggest_loss != 0 %}
+        <tr>
+          <td><strong>Biggest loss</strong></td>
+          <td><span class="points negative">{{ roulette_stats.biggest_loss}}</span></td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if roulettes|length > 0 %}
+    <h3>Roulette history</h3>
+    <table class="ui very basic table collapsing">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Diff</th>
+      </thead>
+      <tbody>
+        {% for roulette in roulettes %}
+        <tr>
+          <td>{{ roulette.created_at }}</td>
+          <td><span class="points {{ 'negative' if roulette.points < 0 else 'positive' }}">{{ roulette.points }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

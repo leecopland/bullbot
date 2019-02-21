@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -8,9 +9,11 @@ import time
 import urllib
 
 import irc.client
+import requests
 from numpy import random
 from pytz import timezone
 
+import pajbot.models.user
 import pajbot.utils
 from pajbot.actions import ActionQueue
 from pajbot.apiwrappers import TwitchAPI
@@ -27,7 +30,6 @@ from pajbot.managers.redis import RedisManager
 from pajbot.managers.schedule import ScheduleManager
 from pajbot.managers.time import TimeManager
 from pajbot.managers.twitter import TwitterManager
-from pajbot.managers.cachet import CachetManager, MPTMetric
 from pajbot.managers.user import UserManager
 from pajbot.managers.websocket import WebSocketManager
 from pajbot.models.action import ActionParser
@@ -38,10 +40,32 @@ from pajbot.models.sock import SocketManager
 from pajbot.models.stream import StreamManager
 from pajbot.models.timer import TimerManager
 from pajbot.streamhelper import StreamHelper
+from pajbot.tmi import TMI
 from pajbot.utils import time_method
 from pajbot.utils import time_since
 
 log = logging.getLogger(__name__)
+
+
+def clean_up_message(message):
+    me = False
+
+    if message.startswith('.me') or message.startswith('/me'):
+        me = True
+        message = message[3:].strip()
+
+    if len(message) == 0:
+        return None
+
+    if message[0] in ['.', '/']:
+        log.warning('Message we attempted to send started with . or /, skipping: {}'.format(message))
+        return None
+
+    # Stop the bot from calling other bot commands
+    if message[0] in ['!', '$', '-', '<']:
+        message = '\u206D' + message
+
+    return message if not me else '.me ' + message
 
 
 class Bot:
@@ -49,7 +73,7 @@ class Bot:
     Main class for the twitch bot
     """
 
-    version = '1.30'
+    version = '1.32'
     date_fmt = '%H:%M'
     admin = None
     url_regex_str = r'\(?(?:(http|https):\/\/)?(?:((?:[^\W\s]|\.|-|[:]{1})+)@{1})?((?:www.)?(?:[^\W\s]|\.|-)+[\.][^\W\s]{2,4}|localhost(?=\/)|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d*))?([\/]?[^\s\?]*[\/]{1})*(?:\/?([^\s\n\?\[\]\{\}\#]*(?:(?=\.)){1}|[^\s\n\?\[\]\{\}\.\#]*)?([\.]{1}[^\s\?\#]*)?)?(?:\?{1}([^\s\n\#\[\]]*))?([\#][^\s\n]*)?\)?'
@@ -74,12 +98,19 @@ class Bot:
     def load_config(self, config):
         self.config = config
 
+        pajbot.models.user.Config.se_sync_token = config['main'].get('se_sync_token', None)
+        pajbot.models.user.Config.se_channel = config['main'].get('se_channel', None)
+
         self.domain = config['web'].get('domain', 'localhost')
 
         self.nickname = config['main'].get('nickname', 'pajbot')
         self.password = config['main'].get('password', 'abcdef')
 
         self.timezone = config['main'].get('timezone', 'UTC')
+        os.environ['TZ'] = self.timezone
+
+        if config['main'].getboolean('verified', False):
+            TMI.promote_to_verified()
 
         self.trusted_mods = config.getboolean('main', 'trusted_mods')
 
@@ -91,14 +122,6 @@ class Bot:
         elif 'target' in config['main']:
             self.channel = config['main']['target']
             self.streamer = self.channel[1:]
-
-        self.wolfram = None
-        try:
-            if 'wolfram' in config['main']:
-                import wolframalpha
-                self.wolfram = wolframalpha.Client(config['main']['wolfram'])
-        except:
-            pass
 
         self.silent = False
         self.dev = False
@@ -156,7 +179,6 @@ class Bot:
         self.kvi = KVIManager()
         self.emotes = EmoteManager(self)
         self.twitter_manager = TwitterManager(self)
-        self.cachet_manager = CachetManager(self)
 
         HandlerManager.trigger('on_managers_loaded')
 
@@ -173,6 +195,7 @@ class Bot:
                 }
 
         self.execute_every(10 * 60, self.commit_all)
+        self.execute_every(1, self.do_tick)
 
         try:
             self.admin = self.config['main']['admin']
@@ -251,7 +274,7 @@ class Bot:
         self.whisper(user.username, 'You finished todays quest! You have been awarded with {} tokens.'.format(tokens_gained))
 
     def update_subscribers_stage1(self):
-        limit = 100
+        limit = 25
         offset = 0
         subscribers = []
         log.info('Starting stage1 subscribers update')
@@ -260,7 +283,7 @@ class Bot:
             retry_same = 0
             while True:
                 log.debug('Beginning sub request {0} {1}'.format(limit, offset))
-                subs, retry_same, error = self.twitchapi.get_subscribers(self.streamer, limit, offset, 0 if retry_same is False else retry_same)
+                subs, retry_same, error = self.twitchapi.get_subscribers(self.streamer, 0, offset, 0 if retry_same is False else retry_same)
                 log.debug('got em!')
 
                 if error is True:
@@ -444,6 +467,41 @@ class Bot:
         log.warning('Unknown key passed to get_value: {0}'.format(key))
         return None
 
+    def privmsg_arr(self, arr):
+        for msg in arr:
+            self.privmsg(msg)
+
+    def privmsg_from_file(self, url, per_chunk=35, chunk_delay=30):
+        try:
+            r = requests.get(url)
+            lines = r.text.split('\n')
+            i = 0
+            while len(lines) > 0:
+                if i == 0:
+                    self.privmsg_arr(lines[:per_chunk])
+                else:
+                    self.execute_delayed(chunk_delay * i, self.privmsg_arr, (lines[:per_chunk],))
+                del lines[:per_chunk]
+                i = i + 1
+        except:
+            log.exception('error in privmsg_from_file')
+
+    # event is an event to clone and change the text from.
+    def eval_from_file(self, event, url):
+        try:
+            r = requests.get(url)
+            lines = r.text.splitlines()
+            import copy
+            for msg in lines:
+                cloned_event = copy.deepcopy(event)
+                cloned_event.arguments = [msg]
+                # omit the source connectino as None (since its not used)
+                self.on_pubmsg(None, cloned_event)
+        except:
+            log.exception('BabyRage')
+            self.say('Exception')
+        self.say('All lines done')
+
     def privmsg(self, message, channel=None, increase_message=True):
         if channel is None:
             channel = self.channel
@@ -502,7 +560,7 @@ class Bot:
     def timeout(self, username, duration, reason=''):
         log.debug('Timing out {} for {} seconds'.format(username, duration))
         self._timeout(username, duration, reason)
-        self.execute_delayed(1, self._timeout, (username, duration, reason))
+        # self.execute_delayed(1, self._timeout, (username, duration, reason))
 
     def timeout_warn(self, user, duration, reason=''):
         duration, punishment = user.timeout(duration, warning_module=self.module_manager['warning'])
@@ -512,6 +570,9 @@ class Bot:
     def timeout_user(self, user, duration, reason=''):
         self._timeout(user.username, duration, reason)
         self.execute_delayed(1, self._timeout, (user.username, duration, reason))
+
+    def _timeout_user(self, user, duration, reason=''):
+        self._timeout(user.username, duration, reason)
 
     def whisper(self, username, *messages, separator='. '):
         """
@@ -526,13 +587,29 @@ class Bot:
 
         return self.irc.whisper(username, message)
 
-    def send_message_to_user(self, user, message, separator='. ', method='say'):
+    def send_message_to_user(self, user, message, event, separator='. ', method='say'):
         if method == 'say':
             self.say(user.username + ', ' + lowercase_first_letter(message), separator=separator)
         elif method == 'whisper':
             self.whisper(user.username, message, separator=separator)
+        elif method == 'me':
+            self.me(message, separator=separator)
+        elif method == 'reply':
+            if event.type in ['action', 'pubmsg']:
+                self.say(message, separator=separator)
+            elif event.type == 'whisper':
+                self.whisper(user.username, message, separator=separator)
         else:
             log.warning('Unknown send_message method: {}'.format(method))
+
+    def safe_privmsg(self, message, channel=None, increase_message=True):
+        # Check for banphrases
+        res = self.banphrase_manager.check_message(message, None)
+        if res is not False:
+            self.privmsg('filtered message ({})'.format(res.id), channel, increase_message)
+            return
+
+        self.privmsg(message, channel, increase_message)
 
     def say(self, *messages, channel=None, separator='. '):
         """
@@ -546,27 +623,24 @@ class Bot:
         if not self.silent:
             message = separator.join(messages).strip()
 
-            if len(message) >= 1:
-                if (message[0] == '.' or message[0] == '/') and not message[1:3] == 'me':
-                    log.warning('Message we attempted to send started with . or /, skipping.')
-                    return
+            message = clean_up_message(message)
+            if not message:
+                return False
 
-                log.info('Sending message: {0}'.format(message))
+            # log.info('Sending message: {0}'.format(message))
 
-                self.privmsg(message[:510], channel)
+            self.privmsg(message[:510], channel)
+
+    def is_bad_message(self, message):
+        return self.banphrase_manager.check_message(message, None) is not False
+
+    def safe_me(self, message, channel=None):
+        if not self.is_bad_message(message):
+            self.me(message, channel)
 
     def me(self, message, channel=None):
         if not self.silent:
-            message = message.strip()
-
-            if len(message) >= 1:
-                if message[0] == '.' or message[0] == '/':
-                    log.warning('Message we attempted to send started with . or /, skipping.')
-                    return
-
-                log.info('Sending message: {0}'.format(message))
-
-                self.privmsg('.me ' + message[:500], channel)
+            self.say('.me ' + message[:500], channel=channel)
 
     def parse_version(self):
         self.version = self.version
@@ -624,7 +698,9 @@ class Bot:
 
         urls = self.find_unique_urls(msg_raw)
 
-        log.debug('{2}{0}: {1}'.format(source.username, msg_raw, '<w>' if whisper else ''))
+        if whisper:
+            self.whisper('datguy1', '{} said: {}'.format(source.username, msg_raw))
+        # log.debug('{2}{0}: {1}'.format(source.username, msg_raw, '<w>' if whisper else ''))
 
         res = HandlerManager.trigger('on_message',
                 source, msg_raw, message_emotes, whisper, urls, event,
@@ -634,22 +710,6 @@ class Bot:
 
         source.last_seen = datetime.datetime.now()
         source.last_active = datetime.datetime.now()
-
-        """
-        if self.streamer == 'forsenlol' and whisper is False:
-            follow_time = self.twitchapi.get_follow_relationship2(source.username, self.streamer)
-
-            if follow_time is False:
-                self._timeout(source.username, 600, '2 years follow mode (or api is down?)')
-                return
-
-            follow_age = datetime.datetime.now() - follow_time
-            log.debug(follow_age)
-
-            if follow_age.days < 730:
-                log.debug('followed less than 730 days LUL')
-                self._timeout(source.username, 600, '2 years follow mode')
-                """
 
         if source.ignored:
             return False
@@ -701,12 +761,12 @@ class Bot:
 
     def on_ping(self, chatconn, event):
         # self.say('Received a ping. Last ping received {} ago'.format(time_since(datetime.datetime.now().timestamp(), self.last_ping.timestamp())))
-        log.info('Received a ping. Last ping received {} ago'.format(time_since(datetime.datetime.now().timestamp(), self.last_ping.timestamp())))
+        # log.info('Received a ping. Last ping received {} ago'.format(time_since(datetime.datetime.now().timestamp(), self.last_ping.timestamp())))
         self.last_ping = datetime.datetime.now()
 
     def on_pong(self, chatconn, event):
         # self.say('Received a pong. Last pong received {} ago'.format(time_since(datetime.datetime.now().timestamp(), self.last_pong.timestamp())))
-        log.info('Received a pong. Last pong received {} ago'.format(time_since(datetime.datetime.now().timestamp(), self.last_pong.timestamp())))
+        # log.info('Received a pong. Last pong received {} ago'.format(time_since(datetime.datetime.now().timestamp(), self.last_pong.timestamp())))
         self.last_pong = datetime.datetime.now()
 
     def on_pubnotice(self, chatconn, event):
@@ -739,18 +799,16 @@ class Bot:
         if event.source.user == self.nickname:
             return False
 
-        with MPTMetric(self.cachet_manager):
-            username = event.source.user.lower()
+        username = event.source.user.lower()
 
-            # We use .lower() in case twitch ever starts sending non-lowercased usernames
-            with self.users.get_user_context(username) as source:
-                res = HandlerManager.trigger('on_pubmsg',
-                        source, event.arguments[0],
-                        stop_on_false=True)
-                if res is False:
-                    return False
-
-                self.parse_message(event.arguments[0], source, event, tags=event.tags)
+        # We use .lower() in case twitch ever starts sending non-lowercased usernames
+        with self.users.get_user_context(username) as source:
+            res = HandlerManager.trigger('on_pubmsg',
+                    source, event.arguments[0],
+                    stop_on_false=True)
+            if res is False:
+                return False
+            self.parse_message(event.arguments[0], source, event, tags=event.tags)
 
     @time_method
     def reload_all(self):
@@ -771,6 +829,9 @@ class Bot:
         log.info('ok!')
 
         HandlerManager.trigger('on_commit', stop_on_false=False)
+
+    def do_tick(self):
+        HandlerManager.trigger('on_tick')
 
     def quit(self, message, event, **options):
         quit_chub = self.config['main'].get('control_hub', None)
@@ -803,7 +864,7 @@ class Bot:
             log.exception('Error while shutting down the apscheduler')
 
         try:
-            self.say(quit.format(**phrase_data))
+            self.say('I have to leave PepeHands')
         except Exception:
             log.exception('Exception caught while trying to say quit phrase')
 
@@ -824,6 +885,7 @@ class Bot:
                 'urlencode': _filter_urlencode,
                 'join': _filter_join,
                 'number_format': _filter_number_format,
+                'add': _filter_add,
                 }
         if filter.name in available_filters:
             return available_filters[filter.name](resp, filter.arguments)
@@ -872,3 +934,9 @@ def _filter_urlencode(var, args):
 
 def lowercase_first_letter(s):
     return s[:1].lower() + s[1:] if s else ''
+
+def _filter_add(var, args):
+    try:
+        return str(int(var) + int(args[0]))
+    except:
+        return ''

@@ -30,6 +30,8 @@ class WebSocketServer:
                     log.info('Binary message received: {0} bytes'.format(len(payload)))
                 else:
                     log.info('Text message received: {0}'.format(payload.decode('utf8')))
+                    for client in WebSocketServer.clients:
+                        client.sendMessage(payload, False)
 
             def onClose(self, wasClean, code, reason):
                 log.info('WebSocket connection closed: {0}'.format(reason))
@@ -98,6 +100,7 @@ class WebSocketManager:
             log.exception('Uncaught exception in WebSocketManager')
 
     def emit(self, event, data={}):
+        log.debug
         if self.server:
             payload = json.dumps({
                 'event': event,

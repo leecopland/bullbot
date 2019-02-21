@@ -146,9 +146,9 @@ class RouletteModule(BaseModule):
                 description='Roulette for points',
                 can_execute_with_whisper=self.settings['can_execute_with_whisper'],
                 examples=[
-                    pajbot.models.command.CommandExample(None, 'Roulette for 69 points',
-                        chat='user:!roulette 69\n'
-                        'bot:pajlada won 69 points in roulette! FeelsGoodMan',
+                    pajbot.models.command.CommandExample(None, 'Roulette for all of your 69 points',
+                        chat='user:!roulette\n'
+                        'bot:datguy1 won 69 points in roulette and now has 138 points! Always lucky PogChamp',
                         description='Do a roulette for 69 points').parse(),
                     ],
                 )
@@ -167,27 +167,23 @@ class RouletteModule(BaseModule):
         user = options['source']
         bot = options['bot']
 
-        if message is None:
-            bot.whisper(user.username, 'I didn\'t recognize your bet! Usage: !roulette 150 to bet 150 points')
+        if message:
+            bot.whisper(user.username, 'The command is only !roulette and it wagers all your points SmileyFace')
             return False
 
-        msg_split = message.split(' ')
         try:
-            bet = pajbot.utils.parse_points_amount(user, msg_split[0])
+            bet = pajbot.utils.parse_points_amount(user, 'all')
         except pajbot.exc.InvalidPointAmount as e:
             bot.whisper(user.username, str(e))
             return False
 
-        if not user.can_afford(bet):
-            bot.whisper(user.username, 'You don\'t have enough points to do a roulette for {} points :('.format(bet))
-            return False
-
-        if bet < self.settings['min_roulette_amount']:
-            bot.whisper(user.username, 'You have to bet at least {} point! :('.format(self.settings['min_roulette_amount']))
+        if bet < 500:
+            bot.whisper(user.username, 'You can only roulette for 500+ points FeelsWeirdMan')
             return False
 
         # Calculating the result
         result = self.rigged_random_result()
+
         points = bet if result else -bet
         user.points += points
 
@@ -206,15 +202,10 @@ class RouletteModule(BaseModule):
         else:
             out_message = self.get_phrase('message_lost', **arguments)
 
-        if self.settings['options_output'] == '1. Show results in chat':
+        if user.subscriber:
             bot.me(out_message)
-        if self.settings['options_output'] == '2. Show results in whispers':
+        else:
             bot.whisper(user.username, out_message)
-        if self.settings['options_output'] == '3. Show results in chat if it\'s over X points else it will be whispered.':
-            if abs(points) >= self.settings['min_show_points']:
-                bot.me(out_message)
-            else:
-                bot.whisper(user.username, out_message)
 
         HandlerManager.trigger('on_roulette_finish', user, points)
 

@@ -26,7 +26,7 @@ class Banphrase(Base):
     phrase = Column(String(256), nullable=False)
     length = Column(Integer, nullable=False, default=300)
     permanent = Column(Boolean, nullable=False, default=False)
-    warning = Column(Boolean, nullable=False, default=True)
+    warning = Column(Boolean, nullable=False, default=False)
     notify = Column(Boolean, nullable=False, default=True)
     case_sensitive = Column(Boolean, nullable=False, default=False)
     remove_accents = Column(Boolean, nullable=False, default=False)
@@ -80,7 +80,7 @@ class Banphrase(Base):
         self.refresh_operator()
 
     def format_message(self, message):
-        if self.case_sensitive is False:
+        if self.case_sensitive is False and self.operator != 'regex':
             message = message.lower()
         if self.remove_accents:
             message = unidecode(message)
@@ -88,7 +88,7 @@ class Banphrase(Base):
         return message
 
     def get_phrase(self):
-        if self.case_sensitive is False:
+        if not self.case_sensitive:
             return self.phrase.lower()
         return self.phrase
 
@@ -98,7 +98,10 @@ class Banphrase(Base):
         self.compiled_regex = None
         if self.operator == 'regex':
             try:
-                self.compiled_regex = re.compile(self.phrase)
+                if self.case_sensitive:
+                    self.compiled_regex = re.compile(self.phrase)
+                else:
+                    self.compiled_regex = re.compile(self.phrase, flags=re.IGNORECASE)
             except Exception:
                 log.exception('Unable to compile regex: {}'.format(self.phrase))
 
@@ -118,7 +121,7 @@ class Banphrase(Base):
         if not self.compiled_regex:
             return False
 
-        return self.compiled_regex.match(self.format_message(message))
+        return self.compiled_regex.search(self.format_message(message))
 
     def match(self, message, user):
         """
@@ -335,7 +338,7 @@ class BanphraseManager:
                     use_warnings=banphrase.warning)
 
             """ Finally, time out the user for whatever timeout length was required. """
-            self.bot.timeout(user.username, timeout_length, reason='Banned phrase')
+            self.bot.timeout(user.username, timeout_length, reason='Banned phrase: {}'.format(banphrase.name))
 
         if banphrase.notify is True and user.minutes_in_chat_online > 60:
             """ Last but not least, notify the user why he has been timed out
@@ -392,7 +395,8 @@ class BanphraseManager:
                 case_sensitive=None,
                 warning=None,
                 sub_immunity=None,
-                remove_accents=None)
+                remove_accents=None,
+                operator='contains')
 
         try:
             args, unknown = parser.parse_known_args(message.split())

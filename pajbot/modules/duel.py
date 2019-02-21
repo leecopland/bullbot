@@ -4,6 +4,7 @@ import logging
 from numpy import random
 
 import pajbot.models
+import pajbot.utils
 from pajbot.managers.db import DBManager
 from pajbot.managers.handler import HandlerManager
 from pajbot.models.duel import DuelManager
@@ -148,6 +149,7 @@ class DuelModule(BaseModule):
         message = options['message']
 
         if message is None:
+            bot.whisper(source.username, 'You didn\'t specify someone to duel. Usage: !duel username bet')
             return False
 
         max_pot = self.settings['max_pot']
@@ -155,24 +157,27 @@ class DuelModule(BaseModule):
         msg_split = message.split()
         username = msg_split[0]
         user = bot.users.find(username)
-        duel_price = 0
+        duel_price = 300
         if user is None:
             # No user was found with this username
             return False
 
         if len(msg_split) > 1:
             try:
-                duel_price = int(msg_split[1])
-                if duel_price < 0:
+                duel_price = pajbot.utils.parse_points_amount(source, msg_split[1])
+                if duel_price < 300:
+                    bot.whisper(source.username, 'You may only duel for 300+ points, no pussy')
+                    bot.whisper(user.username, '{} tried to duel you for less than 300 points. What a ' \
+                                               'cheapskate EleGiggle'.format(source.username_raw))
                     return False
 
-                if duel_price > max_pot:
-                    duel_price = max_pot
-            except ValueError:
-                pass
+            except pajbot.exc.InvalidPointAmount as e:
+                bot.whisper(user.username, str(e))
+                return False
 
         if source.username in self.duel_requests:
             bot.whisper(source.username, 'You already have a duel request active with {}. Type !cancelduel to cancel your duel request.'.format(self.duel_requests[source.username]))
+            bot.whisper(user.username, '{} tried to duel you but he already has a duel request active.'.format(source.username))
             return False
 
         if user == source:
@@ -196,6 +201,16 @@ class DuelModule(BaseModule):
         self.duel_request_price[source.username] = duel_price
         bot.whisper(user.username, 'You have been challenged to a duel by {} for {} points. You can either !accept or !deny this challenge.'.format(source.username_raw, duel_price))
         bot.whisper(source.username, 'You have challenged {} for {} points'.format(user.username_raw, duel_price))
+        bot.execute_delayed(60, self.time_expired, (source.username, user.username, bot))
+
+    def time_expired(self, initiator, target, bot):
+        if target in self.duel_targets and initiator in self.duel_requests:
+            del self.duel_targets[self.duel_requests[initiator]]
+            del self.duel_requests[initiator]
+
+            bot.whisper(initiator, 'Your duel request against {} has expired. Ditched OMEGALUL'.format(target))
+            bot.whisper(target, 'Chu ignoring {} for, his duel request against you expired cmonBruh'.format(initiator))
+        
 
     def cancel_duel(self, **options):
         """
@@ -227,7 +242,6 @@ class DuelModule(BaseModule):
 
         bot = options['bot']
         source = options['source']
-        duel_tax = 0.3  # 30% tax
 
         if source.username not in self.duel_targets:
             bot.whisper(source.username, 'You are not being challenged to a duel by anyone.')
@@ -245,43 +259,64 @@ class DuelModule(BaseModule):
 
             return False
 
+        if source.username == 'archlul' or requestor.username == 'archlul':
+            if source.username == 'archlul': 
+                arch = source
+                winner = requestor
+            else:
+                arch = requestor
+                winner = source
+
+            arguments = {'winner':winner.username,
+                         'loser':arch.username,
+                         'total_pot': duel_price}
+
+            message = self.get_phrase('message_won_points', **arguments)
+            bot.say(message)
+            bot.whisper(winner.username, 'Psst, arch is being trolled. He can never win a bet but he can never go under ' \
+                                         '300 points. You haven\'t been given the full bet but have 10 pity points. ' \
+                                         'Don\'t snitch please :D')
+
+            if arch.points - duel_price < 300:
+                arch.points = 300
+            else:
+                arch.points -= duel_price
+
+            winner.points += 10
+            del self.duel_requests[self.duel_targets[source.username]]
+            del self.duel_targets[source.username]
+            return False
+
         source.points -= duel_price
         requestor.points -= duel_price
-        winning_pot = int(duel_price * (1.0 - duel_tax))
+
         participants = [source, requestor]
         winner = random.choice(participants)
         participants.remove(winner)
         loser = participants.pop()
-        winner.points += duel_price
-        winner.points += winning_pot
+        winner.points += duel_price * 2
 
         winner.save()
         loser.save()
 
-        DuelManager.user_won(winner, winning_pot)
+        DuelManager.user_won(winner, duel_price)
         DuelManager.user_lost(loser, duel_price)
 
         arguments = {
                 'winner': winner.username,
                 'loser': loser.username,
                 'total_pot': duel_price,
-                'extra_points': winning_pot,
                 }
 
-        if duel_price > 0:
-            message = self.get_phrase('message_won_points', **arguments)
-            if duel_price >= 500 and self.settings['show_on_clr']:
-                bot.websocket_manager.emit('notification', {'message': '{} won the duel vs {}'.format(winner.username_raw, loser.username_raw)})
-        else:
-            message = self.get_phrase('message_won', **arguments)
+        message = self.get_phrase('message_won_points', **arguments)
         bot.say(message)
 
         del self.duel_requests[self.duel_targets[source.username]]
         del self.duel_targets[source.username]
 
-        HandlerManager.trigger('on_duel_complete',
-                winner, loser,
-                winning_pot, duel_price)
+        # HandlerManager.trigger('on_duel_complete',
+        #        winner, loser,
+        #        duel_price, duel_price)
 
     def decline_duel(self, **options):
         """

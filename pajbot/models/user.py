@@ -20,6 +20,9 @@ from pajbot.utils import time_method  # NOQA
 
 log = logging.getLogger(__name__)
 
+class Config:
+    se_sync_token = None
+    se_channel = None
 
 class User(Base):
     __tablename__ = 'tb_user'
@@ -116,7 +119,7 @@ class UserSQL:
 
         self.model_loaded = True
 
-        log.debug('[UserSQL] Loading user model for {}'.format(self.username))
+        # log.debug('[UserSQL] Loading user model for {}'.format(self.username))
         # from pajbot.utils import print_traceback
         # print_traceback()
 
@@ -227,8 +230,6 @@ class UserSQL:
 
     @property
     def points_rank(self):
-        return 420
-        """
         if self.shared_db_session:
             query_data = self.shared_db_session.query(sqlalchemy.func.count(User.id)).filter(User.points > self.points).one()
         else:
@@ -237,7 +238,6 @@ class UserSQL:
 
         rank = int(query_data[0]) + 1
         return rank
-        """
 
     @property
     def duel_stats(self):
@@ -639,7 +639,7 @@ class UserCombined(UserRedis, UserSQL):
             self._spend_tokens(tokens_to_spend)
             yield
         except FailedCommand:
-            log.debug('Returning {} points to {}'.format(points_to_spend, self.username_raw))
+            # log.debug('Returning {} points to {}'.format(points_to_spend, self.username_raw))
             self.points += points_to_spend
             self.tokens += tokens_to_spend
         except:
@@ -650,7 +650,7 @@ class UserCombined(UserRedis, UserSQL):
 
     def _spend_points(self, points_to_spend):
         """ Returns true if points were spent, otherwise return False """
-        if points_to_spend <= self.points:
+        if points_to_spend <= self.points and self.username != 'admiralbulldog' and self.username != 'datguy1':
             self.points -= points_to_spend
             return True
 
@@ -681,6 +681,9 @@ class UserCombined(UserRedis, UserSQL):
         return self.points - self.points_in_debt()
 
     def can_afford(self, points_to_spend):
+        if self.username == 'admiralbulldog' or self.username == 'datguy1':
+            return True
+
         return self.points_available() >= points_to_spend
 
     def __eq__(self, other):

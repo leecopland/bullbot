@@ -1,0 +1,39 @@
+<class 'irc.client.ServerNotConnectedError'>
+Not connected.
+<traceback object at 0x7f9a24679bc8>
+<class 'SyntaxError'>
+EOL while scanning string literal (dispatch.py, line 124)
+<traceback object at 0x7f0c4921b848>
+<class 'SyntaxError'>
+invalid syntax (dispatch.py, line 110)
+<traceback object at 0x7f769e578b08>
+<class 'AttributeError'>
+'DotaBetModule' object has no attribute 'bot'
+<traceback object at 0x7faf58419dc8>
+<class 'AttributeError'>
+'DotaBetModule' object has no attribute 'bot'
+<traceback object at 0x7f4f2a39bd88>
+<class 'ValueError'>
+too many values to unpack (expected 2)
+<traceback object at 0x7f9d1d449b08>
+<class 'UnboundLocalError'>
+local variable 'user' referenced before assignment
+<traceback object at 0x7fb68175bcc8>
+<class 'SyntaxError'>
+invalid syntax (dispatch.py, line 110)
+<traceback object at 0x7f5711b36408>
+<class 'NameError'>
+name 'Commands' is not defined
+<traceback object at 0x7fd3a4ff3908>
+<class 'AttributeError'>
+type object 'Command' has no attribute 'dispath_command'
+<traceback object at 0x7f5c28096fc8>
+<class 'sqlalchemy.exc.OperationalError'>
+(pymysql.err.OperationalError) (2013, 'Lost connection to MySQL server during query') [SQL: 'UPDATE tb_command_data SET num_uses=%(num_uses)s, last_date_used=%(last_date_used)s WHERE tb_command_data.command_id = %(tb_command_data_command_id)s'] [parameters: {'num_uses': 234108, 'last_date_used': datetime.datetime(2019, 1, 27, 14, 42, 34, 770347), 'tb_command_data_command_id': 9}] (Background on this error at: http://sqlalche.me/e/e3q8)
+<traceback object at 0x7f2c682b4bc8>
+<class 'AttributeError'>
+module 'pajbot.models.user' has no attribute 'Config'
+<traceback object at 0x7fbc3117ae48>
+<class 'TypeError'>
+__init__() missing 1 required positional argument: 'bot'
+<traceback object at 0x7faa4555c908>

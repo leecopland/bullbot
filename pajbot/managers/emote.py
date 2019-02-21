@@ -70,7 +70,6 @@ class BTTVEmoteManager:
         streamer = StreamHelper.get_streamer()
         key = '{streamer}:emotes:bttv_channel_emotes'.format(streamer=streamer)
         with RedisManager.pipeline_context() as pipeline:
-            pipeline.delete(key)
             for emote_code, emote_hash in self.channel_emotes.items():
                 pipeline.hset(key, emote_code, emote_hash)
 
@@ -80,7 +79,9 @@ class BTTVEmoteManager:
         for emote_code, emote_hash in self.global_emotes.items():
             self.valid_emotes.append(self.build_emote(emote_code, emote_hash))
 
-        for emote_code, emote_hash in self.channel_emotes.items():
+        streamer = StreamHelper.get_streamer()
+        key = '{streamer}:emotes:bttv_channel_emotes'.format(streamer=streamer)
+        for emote_code, emote_hash in list(RedisManager.get().hgetall(key).items()):
             self.valid_emotes.append(self.build_emote(emote_code, emote_hash))
 
     def build_emote(self, emote_code, emote_hash):
@@ -155,7 +156,6 @@ class FFZEmoteManager:
         streamer = StreamHelper.get_streamer()
         key = '{streamer}:emotes:ffz_channel_emotes'.format(streamer=streamer)
         with RedisManager.pipeline_context() as pipeline:
-            pipeline.delete(key)
             for emote_code, emote_hash in self.channel_emotes.items():
                 pipeline.hset(key, emote_code, emote_hash)
 
@@ -165,7 +165,9 @@ class FFZEmoteManager:
         for emote_code, emote_hash in self.global_emotes.items():
             self.valid_emotes.append(self.build_emote(emote_code, emote_hash))
 
-        for emote_code, emote_hash in self.channel_emotes.items():
+        streamer = StreamHelper.get_streamer()
+        key = '{streamer}:emotes:ffz_channel_emotes'.format(streamer=streamer)
+        for emote_code, emote_hash in list(RedisManager.get().hgetall(key).items()):
             self.valid_emotes.append(self.build_emote(emote_code, emote_hash))
 
     def build_emote(self, emote_code, emote_hash):
@@ -239,7 +241,11 @@ class EmoteManager:
 
         for endpoint in endpoints:
             log.debug('Refreshing {0} emotes...'.format(endpoint))
-            data = requests.get(base_url.format(endpoint)).json()
+
+            try:
+                data = requests.get(base_url.format(endpoint)).json()
+            except ValueError:
+                continue
 
             if 'channels' in data:
                 for channel in data['channels']:

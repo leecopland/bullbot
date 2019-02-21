@@ -69,6 +69,8 @@ class SocketManager:
             while True:
                 conn, addr = sr.server.accept()
                 log.debug('Accepted connection from {}'.format(addr))
+                log.debug(addr)
+                log.debug(conn)
 
                 data = conn.recv(4096)
                 if data:

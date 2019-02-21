@@ -100,4 +100,9 @@ def init(app):
             output='gen/scripts/paginate.%(version)s.js')
     assets.register('paginate_js', paginate_js)
 
+    # Playsounds
+    playsounds_js = Bundle('scripts/playsounds.js', filters='jsmin',
+            output='gen/scripts/playsounds.%(version)s.js')
+    assets.register('playsounds_js', playsounds_js)
+
     assets.init_app(app)

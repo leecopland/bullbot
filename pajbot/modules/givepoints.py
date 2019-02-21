@@ -79,6 +79,10 @@ class GivePointsModule(BaseModule):
             bot.whisper(source.username, 'You cannot give away more points than you have. You have {} points.'.format(source.points))
             return False
 
+        if num_points <= 250:
+            bot.whisper(source.username, 'You must give more than 250 points :) Be charitable :).')
+            return False
+
         with bot.users.find_context(username) as target:
             if target is None:
                 # The user tried donating points to someone who doesn't exist in our database

@@ -144,6 +144,16 @@ class CommandManager(UserDict):
                     'win': Command.dispatch_command('add_win',
                         level=500,
                         description='Add a win to something!'),
+                    'playsound': Command.dispatch_command('add_playsound',
+                        level=500,
+                        description='Add a playsound',
+                        can_execute_with_whisper=True,
+                        examples=[
+                            CommandExample(None, 'Add a playsound',
+                                chat='user:!add playsound dumb-b https://i.nuuls.com/Sfu7O.mp3'
+                                'bot:Successfully added https://i.nuuls.com/Sfu7O.mp3 with the name dumb-b to the playsound list',
+                                description='Add a playsound with the ID of \'dumb-b\' and sound of https://i.nuuls.com/Sfu7O.mp3 to list of possible playsounds').parse(),
+                            ]),
                     'funccommand': Command.dispatch_command('add_funccommand',
                         level=2000,
                         description='Add a command that uses a command'),
@@ -245,6 +255,8 @@ class CommandManager(UserDict):
         self.internal_commands['eval'] = Command.dispatch_command('eval',
                 level=2000,
                 description='Run a raw python command. Debug mode only')
+        self.internal_commands['colour'] = Command.dispatch_command('color',
+                level=2000)
 
         return self.internal_commands
 

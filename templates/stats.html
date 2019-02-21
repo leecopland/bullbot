@@ -2,45 +2,157 @@
 {% set active_page = 'stats' %}
 {% block title %}Stats{% endblock %}
 {% block body %}
-<h2>Stats</h2>
-{% if 'duels' in modules %}
-<p><a href="/stats/duels/"><i class="icon linkify"></i>  Duel stats</a></p>
-{% endif %}
-<h3><a href="https://stats.streamelements.com/c/{{ streamer.full_name }}">StreamElements stats page</a></h3>
-<div id="stats">
-    <h3>Top 5 Commands</h3>
-    <table class="ui very basic table">
-        <thead>
-            <tr>
-                <th>Command</th>
-                <th># Uses</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for command in top_5_commands %}
-                <tr>
-                    <td>{{ command['main_alias'] }}</td>
-                    <td>{{ command['data']['num_uses']|number_format }}</td>
-                </tr>
-            {% endfor %}
+<h2>Duel stats</h2>
+<br />
+<div id="stats" class="ui container grid" style="padding: 60px 0;">
+  <div class="sixteen wide mobile eight wide tablet six wide computer column">
+    <h3>Top 5 Winrate</h3>
+    <table class="ui very basic table collapsing celled ">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>% Winrate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stat in top_5_winrate %}
+        {% set user = stat.user %}
+        <tr>
+          <td>{% include 'user/username_link.html' %}</td>
+          <td>{{ stat.winrate|round(2) }}% ({{ stat.duels_won }}-{{ stat.duels_lost }})</td>
+        </tr>
+        {% endfor %}
     </table>
-    {% if 'linefarming' in modules %}
-        <h3>Top 5 Line Farmers</h3>
-        <table class="ui very basic table">
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Lines</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in top_5_line_farmers %}
-                    <tr>
-                        <td>{% include 'user/username_link.html' %}</td>
-                        <td>{{ user.num_lines }}</td>
-                    </tr>
-                {% endfor %}
-        </table>
-    {% endif %}
+  </div>
+  <div class="minitable stats">
+    <h3>Top 5 Duels Won</h3>
+    <table class="ui very basic table celled ">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th># Wins</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stat in top_5_winners %}
+        {% set user = stat.user %}
+        <tr>
+          <td>{% include 'user/username_link.html' %}</td>
+          <td>{{ stat.duels_won|number_format }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+  </div>
+  <div class="minitable stats">
+    <h3>Top 5 Duels Lost</h3>
+    <table class="ui very basic table celled ">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th># Losses</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stat in top_5_losers %}
+        {% set user = stat.user %}
+        <tr>
+          <td>{% include 'user/username_link.html' %}</td>
+          <td>{{ stat.duels_lost }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+  </div>
+  <div class="minitable stats">
+    <h3>Top 5 Points Won</h3>
+    <table class="ui very basic table celled ">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th># Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stat in top_5_points_won %}
+        {% set user = stat.user %}
+        <tr>
+          <td>{% include 'user/username_link.html' %}</td>
+          <td>{{ stat.profit }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+  </div>
+  <div class="minitable stats">
+    <h3>Top 5 Points Lost</h3>
+    <table class="ui very basic table celled ">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th># Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stat in top_5_points_lost %}
+        {% set user = stat.user %}
+        <tr>
+          <td>{% include 'user/username_link.html' %}</td>
+          <td>{{ stat.profit }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+  </div>
+  <div class="minitable stats">
+    <h3>Bottom 5 Winrate</h3>
+    <table class="ui very basic table celled ">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th># Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stat in bottom_5_winrate %}
+        {% set user = stat.user %}
+        <tr>
+          <td>{% include 'user/username_link.html' %}</td>
+          <td>{{ stat.winrate|round(2) }}% ({{ stat.duels_won }}-{{ stat.duels_lost }})</td>
+        </tr>
+        {% endfor %}
+    </table>
+  </div>
+  <h2>Command stats</h2>
+  <br />
+  <h3><a href=" https://stats.streamelements.com/c/ {{ streamer.full_name }}">StreamElements stats page</a></h3>
+  <h3>Top 5 Commands</h3>
+  <table class=" ui very basic table">
+    <thead>
+      <tr>
+        <th>Command</th>
+        <th># Uses</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for command in top_5_commands %}
+      <tr>
+        <td>{{ command['main_alias'] }}</td>
+        <td>{{ command['data']['num_uses']|number_format }}</td>
+      </tr>
+      {% endfor %}
+  </table>
+  <h3>Top 5 Line Farmers</h3>
+  <table class="ui very basic table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Lines</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in top_5_line_farmers %}
+      <tr>
+        <td>{% include 'user/username_link.html' %}</td>
+        <td>{{ user.num_lines }}</td>
+      </tr>
+      {% endfor %}
+  </table>
 </div>
 {% endblock %}

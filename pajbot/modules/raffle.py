@@ -281,10 +281,8 @@ class RaffleModule(BaseModule):
 
         arguments = {'length': self.raffle_length, 'points': self.raffle_points}
         bot.say(self.get_phrase('message_start', **arguments))
-        arguments = {'length': round(self.raffle_length * 0.75), 'points': self.raffle_points}
-        bot.execute_delayed(self.raffle_length * 0.25, bot.say, (self.get_phrase('message_running', **arguments), ))
-        arguments = {'length': round(self.raffle_length * 0.50), 'points': self.raffle_points}
-        bot.execute_delayed(self.raffle_length * 0.50, bot.say, (self.get_phrase('message_running', **arguments), ))
+        arguments = {'length': round(self.raffle_length * 0.60), 'points': self.raffle_points}
+        bot.execute_delayed(self.raffle_length * 0.40, bot.say, (self.get_phrase('message_running', **arguments), ))
         arguments = {'length': round(self.raffle_length * 0.25), 'points': self.raffle_points}
         bot.execute_delayed(self.raffle_length * 0.75, bot.say, (self.get_phrase('message_running', **arguments), ))
 
@@ -318,8 +316,8 @@ class RaffleModule(BaseModule):
 
         if self.settings['show_on_clr']:
             self.bot.websocket_manager.emit('notification', {'message': '{} won {} points in the raffle!'.format(winner.username_raw, self.raffle_points)})
-            self.bot.me('The raffle has finished! {0} won {1} points! PogChamp'.format(winner.username_raw, self.raffle_points))
 
+        self.bot.me('The raffle has finished! {0} won {1} points! PogChamp'.format(winner.username_raw, self.raffle_points))
         winner.points += self.raffle_points
 
         winner.save()
@@ -348,10 +346,8 @@ class RaffleModule(BaseModule):
 
         arguments = {'length': self.raffle_length, 'points': self.raffle_points}
         self.bot.say(self.get_phrase('message_start_multi', **arguments))
-        arguments = {'length': round(self.raffle_length * 0.75), 'points': self.raffle_points}
-        self.bot.execute_delayed(self.raffle_length * 0.25, self.bot.say, (self.get_phrase('message_running_multi', **arguments), ))
-        arguments = {'length': round(self.raffle_length * 0.50), 'points': self.raffle_points}
-        self.bot.execute_delayed(self.raffle_length * 0.50, self.bot.say, (self.get_phrase('message_running_multi', **arguments), ))
+        arguments = {'length': round(self.raffle_length * 0.60), 'points': self.raffle_points}
+        self.bot.execute_delayed(self.raffle_length * 0.40, self.bot.say, (self.get_phrase('message_running_multi', **arguments), ))
         arguments = {'length': round(self.raffle_length * 0.25), 'points': self.raffle_points}
         self.bot.execute_delayed(self.raffle_length * 0.75, self.bot.say, (self.get_phrase('message_running_multi', **arguments), ))
 
@@ -409,7 +405,7 @@ class RaffleModule(BaseModule):
 
         # Decide how we should pick the winners
         log.info('Num participants: {}'.format(num_participants))
-        for winner_percentage in [x * 0.01 for x in range(1, 26)]:
+        for winner_percentage in [x * 0.01 for x in range(1, 10)]:
             log.info('Winner percentage: {}'.format(winner_percentage))
             num_winners = math.ceil(num_participants * winner_percentage)
             points_per_user = math.ceil(abs_points / num_winners)
@@ -424,16 +420,23 @@ class RaffleModule(BaseModule):
                 points_per_user = math.ceil(abs_points / num_winners)
                 break
 
-        log.info('k done. got {} winners'.format(num_winners))
         winners = self.raffle_users[:num_winners]
         self.raffle_users = []
 
         if negative:
             points_per_user *= -1
 
+        for winner in winners:
+            if not winner.subscriber and random.randint(1, 10) > 5:
+                winners.remove(winner)
+                continue
+
+        points_per_user = math.ceil(abs_points / len(winners))
+
         self.bot.me('The multi-raffle has finished! {0} users won {1} points each! PogChamp'.format(len(winners), points_per_user))
 
         winners_arr = []
+
         for winner in winners:
             winner.points += points_per_user
             winners_arr.append(winner)

@@ -1,5 +1,6 @@
 import logging
 import re
+import random
 
 from pajbot.managers.handler import HandlerManager
 from pajbot.modules import BaseModule
@@ -76,6 +77,7 @@ class PyramidModule(BaseModule):
         self.bot = None
 
         self.data = []
+        self.badUsers = ['nebbarcS', 'dank__doge', 'm133225', 'swordmaster100', 'bulldogisatrihard', 'dota2_dz', 'bakmi44']
         self.going_down = False
         self.regex = re.compile(' +')
 
@@ -105,8 +107,14 @@ class PyramidModule(BaseModule):
                             if self.going_down:
                                 self.data = []
                                 self.going_down = False
+                            if cur_len == 3 and source.username in self.badUsers and random.randint(1, 100) > 50:
+                                self.data = []
+                                self.going_down = False
+                                self.bot.say('SoBayed')
+
                         elif len_diff < 0:
                             self.going_down = True
+
                             if cur_len == 1:
                                 # A pyramid was finished
                                 peak_length = 0

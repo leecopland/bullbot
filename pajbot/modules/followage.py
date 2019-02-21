@@ -26,6 +26,7 @@ class FollowAgeModule(BaseModule):
                 options=[
                     'say',
                     'whisper',
+                    'reply'
                     ]),
             ModuleSetting(
                 key='action_followsince',
@@ -36,6 +37,7 @@ class FollowAgeModule(BaseModule):
                 options=[
                     'say',
                     'whisper',
+                    'reply'
                     ]),
             ]
 
@@ -97,65 +99,73 @@ class FollowAgeModule(BaseModule):
                     ],
                 )
 
-    def check_follow_age(self, bot, source, username, streamer):
+    def check_follow_age(self, bot, source, username, streamer, event):
         streamer = bot.streamer if streamer is None else streamer.lower()
         age = bot.twitchapi.get_follow_relationship(username, streamer)
         is_self = source.username == username
+        message = ''
 
         if age:
             # Following
             human_age = time_since(datetime.datetime.now().timestamp() - age.timestamp(), 0)
             suffix = 'been following {} for {}'.format(streamer, human_age)
             if is_self:
-                bot.send_message_to_user(source, 'You have ' + suffix, method=self.settings['action_followage'])
+                message = 'You have ' + suffix
             else:
-                bot.send_message_to_user(source, username + ' has ' + suffix, method=self.settings['action_followage'])
+                message = username + ' has ' + suffix
         else:
             # Not following
             suffix = 'not following {}'.format(streamer)
             if is_self:
-                bot.send_message_to_user(source, 'You are ' + suffix, method=self.settings['action_followage'])
+                message = 'You are ' + suffix
             else:
-                bot.send_message_to_user(source, username + ' is ' + suffix, method=self.settings['action_followage'])
+                message = username + ' is ' + suffix
 
-    def check_follow_since(self, bot, source, username, streamer):
+        bot.send_message_to_user(source, message, event, method=self.settings['action_followage'])
+
+    def check_follow_since(self, bot, source, username, streamer, event):
         streamer = bot.streamer if streamer is None else streamer.lower()
         follow_since = bot.twitchapi.get_follow_relationship(username, streamer)
         is_self = source.username == username
+        message = ''
 
         if follow_since:
             # Following
             human_age = follow_since.strftime('%d %B %Y, %X')
             suffix = 'been following {} since {} UTC'.format(streamer, human_age)
             if is_self:
-                bot.send_message_to_user(source, 'You have ' + suffix, method=self.settings['action_followsince'])
+                message = 'You have ' + suffix
             else:
-                bot.send_message_to_user(source, username + ' has ' + suffix, method=self.settings['action_followsince'])
+                message = username + ' has ' + suffix
         else:
             # Not following
             suffix = 'not following {}'.format(streamer)
             if is_self:
-                bot.send_message_to_user(source, 'You are ' + suffix, method=self.settings['action_followsince'])
+                message = 'You are ' + suffix
             else:
-                bot.send_message_to_user(source, username + ' is ' + suffix, method=self.settings['action_followsince'])
+                message = username + ' is ' + suffix
+
+        bot.send_message_to_user(source, message, event, method=self.settings['action_followsince'])
 
     def follow_age(self, **options):
         source = options['source']
         message = options['message']
         bot = options['bot']
+        event = options['event']
 
         username, streamer = self.parse_message(bot, source, message)
 
-        self.action_queue.add(self.check_follow_age, args=[bot, source, username, streamer])
+        self.action_queue.add(self.check_follow_age, args=[bot, source, username, streamer, event])
 
     def follow_since(self, **options):
         bot = options['bot']
         source = options['source']
         message = options['message']
+        event = options['event']
 
         username, streamer = self.parse_message(bot, source, message)
 
-        self.action_queue.add(self.check_follow_since, args=[bot, source, username, streamer])
+        self.action_queue.add(self.check_follow_since, args=[bot, source, username, streamer, event])
 
     def parse_message(self, bot, source, message):
         username = source.username

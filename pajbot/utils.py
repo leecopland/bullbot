@@ -51,7 +51,7 @@ def time_method(f):
         time1 = time.time()
         ret = f(*args)
         time2 = time.time()
-        log.debug('{0.__name__}::{1.__name__} function took {2:.3f} ms'.format(get_class_that_defined_method(f), f, (time2 - time1) * 1000.0))
+        # log.debug('{0.__name__}::{1.__name__} function took {2:.3f} ms'.format(get_class_that_defined_method(f), f, (time2 - time1) * 1000.0))
         return ret
     return wrap
 
@@ -61,7 +61,7 @@ def time_nonclass_method(f):
         time1 = time.time()
         ret = f(*args)
         time2 = time.time()
-        log.debug('{0.__name__} function took {1:.3f} ms'.format(f, (time2 - time1) * 1000.0))
+        # log.debug('{0.__name__} function took {1:.3f} ms'.format(f, (time2 - time1) * 1000.0))
         return ret
     return wrap
 
@@ -71,7 +71,7 @@ def profile_timer(name):
     time1 = time.time()
     yield
     time2 = time.time()
-    log.debug('"{0}" task took {1:.3f} ms'.format(name, (time2 - time1) * 1000.0))
+    # log.debug('"{0}" task took {1:.3f} ms'.format(name, (time2 - time1) * 1000.0))
 
 
 def find(predicate, seq):
