@@ -85,7 +85,7 @@ SQLAlchemy==1.2.8
 tempora==1.11
 traceback2==1.4.0
 tweepy==3.6.0
-Twisted==18.4.0
+twisted>=20.3.0
 txaio==2.10.0
 tzlocal==1.5.1
 Unidecode==1.0.22
