@@ -76,7 +76,7 @@ regex==2018.6.9
 requests>=2.20.0
 requests-oauthlib==1.0.0
 riotwatcher==2.3.0
-rsa==3.4.2
+rsa==4.1
 scrypt==0.8.6
 service-identity==17.0.0
 six==1.11.0
