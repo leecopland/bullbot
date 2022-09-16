@@ -47,7 +47,7 @@ jinja2>=2.11.3
 jsmin==2.2.2
 linecache2==1.0.0
 m3u8==0.3.5
-Mako==1.0.7
+Mako==1.2.2
 Markdown==2.6.11
 MarkupSafe==1.0
 mccabe==0.6.1
